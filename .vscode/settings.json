@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.mpy": "python",
+        "anglas_oled_ssd1306.h": "c"
+    }
+}
