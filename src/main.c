@@ -114,7 +114,7 @@ float F_SIGNAL_MENU;
 uint32_t INDICE_MENU_E;
 float INDICE_MENU;
 float M_a = 1.0;  // �?ndice de modulación inicial
-float frecMax = 99.9;
+float frecMax = 100.0;
 bool MI_Invertida=0;
 uint32_t rampaUp=15;
 uint32_t RAMPA_UP_MENU;
@@ -180,13 +180,13 @@ int main(void)
   OLED_Init();
   //HAL_TIM_Base_Start_IT(&htim3);
 
-//   F_PORTADORA = Flash_Read(FLASH_PAGE_ADDRESS);
-//   F_SIGNAL_G = Flash_Read_Float(FLASH_PAGE_ADDRESS + 4);
+  F_PORTADORA = Flash_Read(FLASH_PAGE_ADDRESS);
+  F_SIGNAL_G = Flash_Read_Float(FLASH_PAGE_ADDRESS + 4);
 
-//   frecMax = Flash_Read_Float(FLASH_PAGE_ADDRESS + 8);
-//   MI_Invertida = Flash_Read(FLASH_PAGE_ADDRESS + 12);
-//   rampaUp = Flash_Read(FLASH_PAGE_ADDRESS + 16);
-//   rampaDown = Flash_Read(FLASH_PAGE_ADDRESS + 20);
+  frecMax = Flash_Read_Float(FLASH_PAGE_ADDRESS + 8);
+  MI_Invertida = Flash_Read(FLASH_PAGE_ADDRESS + 12);
+  rampaUp = Flash_Read(FLASH_PAGE_ADDRESS + 16);
+  rampaDown = Flash_Read(FLASH_PAGE_ADDRESS + 20);
 
   if(F_SIGNAL_G>frecMax){
   	  F_SIGNAL_G=frecMax;
@@ -206,18 +206,11 @@ int main(void)
   Inicializar();
   Paro_SPWM();
 
-  HAL_Delay(5000);
-
-
+  HAL_Delay(500);
   //OLED_Imagen(house);
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(HAL_GPIO_ReadPin (GPIOA, BT_Pin)){
+	  if(HAL_GPIO_ReadPin(GPIOA, BT_Pin)){
 		  if(cuentaMenu>1 && cuentaMenu<8){
 			  Marcha_GRAL=!Marcha_GRAL;
 		  }
@@ -233,7 +226,6 @@ int main(void)
 		  	cuentaMenu=11;
 		  }
 		  while(cuentaMenu>9){
-
 			  Menu= DETECTA_ENCODER(cuentaAnterior,Menu,7);
 			  cuentaAnterior=__HAL_TIM_GET_COUNTER(&htim2);
 			  pulso=0;
@@ -288,12 +280,12 @@ int main(void)
 
 				OLED_MENU_Modulante();
 
-				F_SIGNAL_MENU_E= DETECTA_ENCODER(cuentaAnterior,F_SIGNAL_MENU_E,(frecMax*10));
+				F_SIGNAL_MENU_E= DETECTA_ENCODER(cuentaAnterior,F_SIGNAL_MENU_E, (uint32_t) (frecMax*10));
 			  	cuentaAnterior=__HAL_TIM_GET_COUNTER(&htim2);
 			  	if(F_SIGNAL_MENU_E<10){
 			  		F_SIGNAL_MENU_E=10;
 			  	}
-			  	F_SIGNAL_MENU=(float)F_SIGNAL_MENU_E/10;
+			  	F_SIGNAL_MENU=(float)F_SIGNAL_MENU_E/10.0;
 			  	if(HAL_GPIO_ReadPin (GPIOA, BT_Pin)==0){
 			  		if(pulso==1){
 			  			subMenu=1;
@@ -418,11 +410,12 @@ int main(void)
 				  	  case 1:
 				  		  OLED_Clear();
 				  		  F_SIGNAL_MENU_E=F_SIGNAL_G*10;
+						  F_SIGNAL_MENU=F_SIGNAL_G;
 				  		  subMenu=4;
 				  		  break;
 				  	  case 2:
 				  		  OLED_Clear();
-				  		  INDICE_MENU_E=frecMax*10;
+				  		  INDICE_MENU_E=(uint32_t) (frecMax*10);
 				  		  subMenu=5;
 				  		  break;
 				  	  case 3:
@@ -439,7 +432,7 @@ int main(void)
 				  		  RAMPA_DOWN_MENU=rampaDown;
 				  		  subMenu=8;
 				  		  break;
-				  	  case 6:
+				  	  case 7:
 				  		  OLED_Clear();
 				  	      Menu=0;
 				  	  	  cuentaMenu=0;
@@ -981,7 +974,7 @@ void OLED_MENU(void) {
 		case 1:
 			OLED_Print_Text(0,0,2,"Set portadora ");//
 			OLED_Print_Text(2,0,2,">Set modulante");//
-			OLED_Print_Text(4,0,2,"Set frec. Max");//
+			OLED_Print_Text(4,0,2,"Set frec. Max ");//
 			OLED_Print_Text(6,0,2,"Set marcha ");//
 			break;
 		case 2:
@@ -993,21 +986,27 @@ void OLED_MENU(void) {
 		case 3:
 			OLED_Print_Text(0,0,2,"Set portadora ");//
 			OLED_Print_Text(2,0,2,"Set modulante ");//
-			OLED_Print_Text(4,0,2,"Set frec. Max");//
+			OLED_Print_Text(4,0,2,"Set frec. Max ");//
 			OLED_Print_Text(6,0,2,">Set marcha");//
 			break;
 		case 4:
 			OLED_Print_Text(0,0,2,">Set ramp. UP");//
 			OLED_Print_Text(2,0,2,"Set ramp. DW ");//
+			OLED_Print_Text(4,0,2,"Set A nom.    ");//
 			OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 5:
 			OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
 			OLED_Print_Text(2,0,2,">Set ramp. DW");//
+			OLED_Print_Text(4,0,2,"Set A nom.    ");//
 			OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 6:
 			Menu++;
+			// OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
+			// OLED_Print_Text(2,0,2,"Set ramp. DW ");//
+			// OLED_Print_Text(4,0,2,">Set A nom.   ");//
+			// OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 7:
 			OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
@@ -1029,14 +1028,14 @@ void OLED_MENU_Portadora(void) {
 
 void OLED_MENU_Modulante(void) {
 	OLED_Print_Text(0,0,2,"SET MODULANTE:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
-	sprintf(buff,"%2.1f Hz  ",(F_SIGNAL_MENU));//sprintf(buff,"%2.1f Hz",(F_SIGNAL_MENU));//
+	sprintf(buff,"%03d.%1d Hz", (uint16_t)(F_SIGNAL_MENU_E / 10), (uint16_t)F_SIGNAL_MENU_E % 10);//sprintf(buff,"%2.1f Hz",(F_SIGNAL_MENU));//
 	OLED_Print_Text(4,0,2,buff);//
 	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
 }
 
 void OLED_MENU_Modulacion(void) {
 	OLED_Print_Text(0,0,2,"SET F. MAX.:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
-	sprintf(buff,"%2.1f Hz  ",(INDICE_MENU));
+	sprintf(buff,"%03d.%1d Hz  ", (uint16_t)(INDICE_MENU_E / 10), (uint16_t)INDICE_MENU_E % 10);
 	OLED_Print_Text(4,0,2,buff);//
 	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
 }
