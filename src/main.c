@@ -290,6 +290,7 @@ int main(void)
 			  		if(pulso==1){
 			  			subMenu=1;
 			  			F_SIGNAL_A=F_SIGNAL_MENU;
+						// F_SIGNAL_F=F_SIGNAL_A;
 			  			F_SIGNAL_G= F_SIGNAL_A;
 			  			//Grabar_Todo();
 			  			pulso=0;
@@ -314,6 +315,7 @@ int main(void)
 			  		if(pulso==1){
 			  			subMenu=1;
 			  			frecMax=INDICE_MENU;
+						
 			  			if(F_SIGNAL_F >=0.1){
 			  				Start_SPWM();
 			  			}
@@ -459,11 +461,11 @@ int main(void)
 		  }
 	  }
 
-	  if(Marcha_GRAL==1){
-		  F_SIGNAL_A= F_SIGNAL_G;
-	  }else{
-		  F_SIGNAL_A=0.0;
-	  }
+	//   if(Marcha_GRAL==1){
+	// 	  F_SIGNAL_A= F_SIGNAL_G;
+	//   }else{
+	// 	  F_SIGNAL_A=0.0;
+	//   }
 	  OLED();
 	  Rampa();
 
@@ -1136,7 +1138,7 @@ void Rampa(void){
 		      M_a = F_SIGNAL_F * 0.02;
 		      Generar();
 		  }
-	  if(F_SIGNAL_F >0.9 && banderaM==0){
+	  if(F_SIGNAL_F > 0.9 && banderaM==0){
 		  Start_SPWM();
 		  banderaM=1;
 	  }else if(F_SIGNAL_F <0.9){
