@@ -96,7 +96,7 @@ uint32_t DestAddress3 = (uint32_t) &(TIM1->CCR3);
 uint32_t TIM4_Ticks;
 uint32_t TIM1_Ticks;
 
-char buff[16];
+char buff[32];
 
 uint8_t Menu;
 uint8_t subMenu;
@@ -113,8 +113,8 @@ uint32_t F_SIGNAL_MENU_E;
 float F_SIGNAL_MENU;
 uint32_t INDICE_MENU_E;
 float INDICE_MENU;
-float M_a = 1.0;  // �?ndice de modulación inicial
-float frecMax = 100.0;
+float M_a = 1.0;  // indice de modulación inicial
+float frecMax = 99.9;
 bool MI_Invertida=0;
 uint32_t rampaUp=15;
 uint32_t RAMPA_UP_MENU;
@@ -134,28 +134,16 @@ int banderaM=0;
 #define CYCLE_SAMPLES (SAMPLE_RATE / 5) // Muestras por ciclo (50 Hz)
 
 
-
-/* USER CODE END 0 */
-
 /**
   * @brief  The application entry point.
   * @retval int
   */
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
@@ -166,12 +154,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  // Desactivar las salidas PWM al principio
-
-
   MX_DMA_Init();
   MX_TIM4_Init();
-
   MX_TIM1_Init();
   MX_I2C1_Init();
   MX_ADC1_Init();
@@ -181,6 +165,30 @@ int main(void)
   //HAL_TIM_Base_Start_IT(&htim3);
 
   F_PORTADORA = Flash_Read(FLASH_PAGE_ADDRESS);
+  if(F_PORTADORA>20000){
+	  	HAL_FLASH_Unlock();
+
+	  	FLASH_EraseInitTypeDef eraseInitStruct;
+	  	uint32_t pageError;
+
+	  	eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+	  	eraseInitStruct.PageAddress = FLASH_PAGE_ADDRESS;
+	  	eraseInitStruct.NbPages = 1;
+
+	  	if (HAL_FLASHEx_Erase(&eraseInitStruct, &pageError) != HAL_OK) {
+	  	 	Error_Handler();
+	  	}
+	  	Flash_Write(FLASH_PAGE_ADDRESS, 4000);  // F_PORTADORA
+	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 4, 50.0);  // �?ndice M
+	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 8, 50.0);  // �?ndice M
+	  	Flash_Write(FLASH_PAGE_ADDRESS + 12, 0);  // Marcha
+	  	Flash_Write(FLASH_PAGE_ADDRESS + 16, 10);  // Rampa UP
+	  	Flash_Write(FLASH_PAGE_ADDRESS + 20, 10);  // Rampa DOWN
+	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 24, 3.0);  // Amper
+
+	  	HAL_FLASH_Lock();
+	  	F_PORTADORA = Flash_Read(FLASH_PAGE_ADDRESS);
+  }
   F_SIGNAL_G = Flash_Read_Float(FLASH_PAGE_ADDRESS + 4);
 
   frecMax = Flash_Read_Float(FLASH_PAGE_ADDRESS + 8);
@@ -193,7 +201,11 @@ int main(void)
   }
   F_SIGNAL_A=F_SIGNAL_G;
   F_SIGNAL_F=F_SIGNAL_G;
-  F_SIGNAL_F=F_SIGNAL_A=0.0;
+  
+  if (F_SIGNAL_F < 0.1f) {
+    F_SIGNAL_F = 1.0f;
+  }
+
   TIM4_Ticks = TIM4CLK / (NS * F_SIGNAL_F);
   TIM1_Ticks = TIM4CLK / F_PORTADORA;
   TIM4->ARR=TIM4_Ticks-1;
@@ -275,7 +287,6 @@ int main(void)
 
 			  }
 
-			  ///
 			  while(subMenu==4){
 
 				OLED_MENU_Modulante();
@@ -290,7 +301,6 @@ int main(void)
 			  		if(pulso==1){
 			  			subMenu=1;
 			  			F_SIGNAL_A=F_SIGNAL_MENU;
-						// F_SIGNAL_F=F_SIGNAL_A;
 			  			F_SIGNAL_G= F_SIGNAL_A;
 			  			//Grabar_Todo();
 			  			pulso=0;
@@ -315,7 +325,6 @@ int main(void)
 			  		if(pulso==1){
 			  			subMenu=1;
 			  			frecMax=INDICE_MENU;
-						
 			  			if(F_SIGNAL_F >=0.1){
 			  				Start_SPWM();
 			  			}
@@ -361,7 +370,6 @@ int main(void)
 
 			  }
 
-			  ///
 			  while(subMenu==8){
 				  OLED_MENU_RampaDW();
 
@@ -381,7 +389,7 @@ int main(void)
 			  	subMenu=1;
 			  }
 			  OLED_MENU();
-			  if(HAL_GPIO_ReadPin (GPIOA, BT_Pin)==0){
+			  if(HAL_GPIO_ReadPin(GPIOA, BT_Pin)==0){
 				  switch(Menu){
 				  	  case 0:
 				  		  if(subMenu==2){
@@ -406,7 +414,6 @@ int main(void)
 				  	  case 1:
 				  		  OLED_Clear();
 				  		  F_SIGNAL_MENU_E=F_SIGNAL_G*10;
-						  F_SIGNAL_MENU=F_SIGNAL_G;
 				  		  subMenu=4;
 				  		  break;
 				  	  case 2:
@@ -441,9 +448,6 @@ int main(void)
 					  subMenu=2;
 				  }
 			  }
-
-
-
 		  }
 	  }
 
@@ -518,6 +522,8 @@ void SystemClock_Config(void)
 
 /**
   * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
   */
 static void MX_ADC1_Init(void)
 {
@@ -563,6 +569,8 @@ static void MX_ADC1_Init(void)
 
 /**
   * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
   */
 static void MX_I2C1_Init(void)
 {
@@ -595,6 +603,8 @@ static void MX_I2C1_Init(void)
 
 /**
   * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
   */
 static void MX_TIM1_Init(void)
 {
@@ -659,7 +669,7 @@ static void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 90;
+  sBreakDeadTimeConfig.DeadTime = 107;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
@@ -812,11 +822,13 @@ static void MX_DMA_Init(void)
 }
 
 /**
-  * GPIO Initialization Function
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
   */
 static void MX_GPIO_Init(void)
 {
- GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 /* USER CODE BEGIN MX_GPIO_Init_1 */
 /* USER CODE END MX_GPIO_Init_1 */
 
@@ -868,7 +880,6 @@ void generate_spwm_table(void) {
 }
 
 void OLED(void) {
-
 	if(F_SIGNAL_F!=F_SIGNAL_A){
 		if(habCuenta==1){
 			OLED_Print_Text(5,5,3,"UP    ");
@@ -880,21 +891,28 @@ void OLED(void) {
 		}
 
 	}else{
-
-		OLED_Print_Text(0,50,2,"/"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
+		snprintf(buff,sizeof(buff),
+			"%2ldkHz/%02d.%1dHz",
+			F_PORTADORA/1000,
+			(uint16_t)(F_SIGNAL_G),
+			(uint16_t)(F_SIGNAL_G * 10) % 10
+		);
+		OLED_Print_Text(0,5,2,buff);
+		// OLED_Print_Text(0,50,2,"/"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 		OLED_Print_Text(2,0,2,"Amp.:");
-		snprintf(buff,sizeof(buff),"%2ldkHz",F_PORTADORA/1000);
+		snprintf(buff,sizeof(buff),"%02d.%1d%%",
+			(uint16_t)(M_a * 100),
+			(uint16_t)(M_a * 1000) % 10
+		);
+		OLED_Print_Text(2,50,2,buff);
 
-		OLED_Print_Text(0,0,2,buff);
-		snprintf(buff,sizeof(buff),"%2.1fHz",(F_SIGNAL_G));//
-		OLED_Print_Text(0,70,2,buff);
 		if(F_SIGNAL_F<10.0){
 			OLED_Print_Text(5,65,3," ");
 		}
-		snprintf(buff,sizeof(buff),"%2.1f",F_SIGNAL_F);//
+		snprintf(buff,sizeof(buff),"%02d.%1d",(uint16_t)(F_SIGNAL_F / 10), (uint16_t)F_SIGNAL_F % 10);
 		OLED_Print_Text(5,5,3,buff);
 		OLED_Print_Text(5,90,3,"Hz");
-		HAL_Delay(100);
+		HAL_Delay(50);
 	}
 
 }
@@ -988,26 +1006,22 @@ void OLED_MENU(void) {
 		case 4:
 			OLED_Print_Text(0,0,2,">Set ramp. UP");//
 			OLED_Print_Text(2,0,2,"Set ramp. DW ");//
-			OLED_Print_Text(4,0,2,"Set A nom.    ");//
+			OLED_Print_Text(4,0,2,"              ");//
 			OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 5:
 			OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
 			OLED_Print_Text(2,0,2,">Set ramp. DW");//
-			OLED_Print_Text(4,0,2,"Set A nom.    ");//
+			OLED_Print_Text(4,0,2,"              ");//
 			OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 6:
 			Menu++;
-			// OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
-			// OLED_Print_Text(2,0,2,"Set ramp. DW ");//
-			// OLED_Print_Text(4,0,2,">Set A nom.   ");//
-			// OLED_Print_Text(6,0,2,"Volver        ");//
 			break;
 		case 7:
 			OLED_Print_Text(0,0,2,"Set ramp. UP  ");//
 			OLED_Print_Text(2,0,2,"Set ramp. DW ");//
-			OLED_Print_Text(4,0,2,"Set A nom.    ");//
+			OLED_Print_Text(4,0,2,"              ");//
 			OLED_Print_Text(6,0,2,">Volver       ");//
 			break;
 	}
@@ -1018,48 +1032,42 @@ void OLED_MENU(void) {
 void OLED_MENU_Portadora(void) {
 	OLED_Print_Text(0,0,2,"SET PORTADORA:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	sprintf(buff,"%2ld Hz  ",(F_PORTADORA_MENU));//
-	OLED_Print_Text(4,0,2,buff);//
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
+	OLED_Print_Text(4,0,2,buff);
 }
 
 void OLED_MENU_Modulante(void) {
 	OLED_Print_Text(0,0,2,"SET MODULANTE:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	sprintf(buff,"%03d.%1d Hz", (uint16_t)(F_SIGNAL_MENU_E / 10), (uint16_t)F_SIGNAL_MENU_E % 10);//sprintf(buff,"%2.1f Hz",(F_SIGNAL_MENU));//
-	OLED_Print_Text(4,0,2,buff);//
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
+	OLED_Print_Text(4,0,2,buff);
 }
 
 void OLED_MENU_Modulacion(void) {
 	OLED_Print_Text(0,0,2,"SET F. MAX.:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	sprintf(buff,"%03d.%1d Hz  ", (uint16_t)(INDICE_MENU_E / 10), (uint16_t)INDICE_MENU_E % 10);
-	OLED_Print_Text(4,0,2,buff);//
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
+	OLED_Print_Text(4,0,2,buff);
 }
 
 void OLED_MENU_Marcha(void) {
 	OLED_Print_Text(0,0,2,"SET INV. MAR.:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	if(MI_Invertida==1){
-		OLED_Print_Text(4,0,2,"True ");//
+		OLED_Print_Text(4,0,2,"True ");
 	}else{
-		OLED_Print_Text(4,0,2,"False");//
+		OLED_Print_Text(4,0,2,"False");
 	}
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
 }
 
 void OLED_MENU_RampaUP(void) {
 	OLED_Print_Text(0,0,2,"SET RAMPA UP:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	OLED_Print_Text(2,0,1,"Rango: (0-15)S");
 	sprintf(buff,"%2ld Seg  ",(RAMPA_UP_MENU));//
-	OLED_Print_Text(4,0,2,buff);//
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
+	OLED_Print_Text(4,0,2,buff);
 }
 
 void OLED_MENU_RampaDW(void) {
 	OLED_Print_Text(0,0,2,"SET RAMPA DW:"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
 	OLED_Print_Text(2,0,1,"Rango: (0-15)S");
 	sprintf(buff,"%2ld Seg  ",(RAMPA_DOWN_MENU));//
-	OLED_Print_Text(4,0,2,buff);//
-	//Sin delay, consume mucho tiempo función delay, ver de buscar un doble núcleo
+	OLED_Print_Text(4,0,2,buff);
 }
 
 void Paro_SPWM(void){

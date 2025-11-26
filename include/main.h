@@ -49,6 +49,16 @@ extern "C" {
 
 /* USER CODE END EM */
 
+enum submenu_index {
+  MENU_PORTADORA = 3,
+  MENU_MODULANTE,
+  MENU_F_MAX,
+  MENU_MARCHA,
+  MENU_RAMP_UP,
+  MENU_RAMP_DW,
+} submenu_index_enum;
+
+
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
