@@ -362,9 +362,7 @@ int main(void)
 			  }
 
 			  ///
-
 			  while(subMenu==8){
-
 				  OLED_MENU_RampaDW();
 
 				  RAMPA_DOWN_MENU= DETECTA_ENCODER(cuentaAnterior,RAMPA_DOWN_MENU,15);
@@ -378,11 +376,7 @@ int main(void)
 			 	  }else{
 			 		pulso=1;
 			 	  }
-
 			  }
-
-
-			  ///
 			  if(subMenu==0){
 			  	subMenu=1;
 			  }
@@ -1195,8 +1189,10 @@ float Flash_Read_Float(uint32_t address) {
 }
 
 void Flash_Write_Float(uint32_t address, float data) {
+	uint32_t tmp;
+    memcpy(&tmp, &data, sizeof(tmp));
     HAL_FLASH_Unlock();
-    HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, *(uint32_t*)&data);
+    HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, tmp);
     HAL_FLASH_Lock();
 }
 
