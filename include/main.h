@@ -50,6 +50,8 @@ extern "C" {
 /* USER CODE END EM */
 
 enum submenu_index {
+  MENU_IDLE = 0,
+  MENU_INICIO = 1,
   MENU_PORTADORA = 3,
   MENU_MODULANTE,
   MENU_F_MAX,

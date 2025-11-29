@@ -165,7 +165,7 @@ int main(void)
   //HAL_TIM_Base_Start_IT(&htim3);
 
   F_PORTADORA = Flash_Read(FLASH_PAGE_ADDRESS);
-  if(F_PORTADORA>20000){
+  if(F_PORTADORA>18000){
 	  	HAL_FLASH_Unlock();
 
 	  	FLASH_EraseInitTypeDef eraseInitStruct;
@@ -179,8 +179,8 @@ int main(void)
 	  	 	Error_Handler();
 	  	}
 	  	Flash_Write(FLASH_PAGE_ADDRESS, 4000);  // F_PORTADORA
-	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 4, 50.0);  // �?ndice M
-	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 8, 50.0);  // �?ndice M
+	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 4, 50.0);  // Indice M
+	  	Flash_Write_Float(FLASH_PAGE_ADDRESS + 8, 50.0);  // Indice M
 	  	Flash_Write(FLASH_PAGE_ADDRESS + 12, 0);  // Marcha
 	  	Flash_Write(FLASH_PAGE_ADDRESS + 16, 10);  // Rampa UP
 	  	Flash_Write(FLASH_PAGE_ADDRESS + 20, 10);  // Rampa DOWN
@@ -218,7 +218,7 @@ int main(void)
   Inicializar();
   Paro_SPWM();
 
-  HAL_Delay(500);
+  HAL_Delay(1000);
   //OLED_Imagen(house);
   while (1)
   {
@@ -227,8 +227,7 @@ int main(void)
 			  Marcha_GRAL=!Marcha_GRAL;
 		  }
 		  cuentaMenu=0;
-	  }
-	  else{
+	  } else {
 		  cuentaMenu++;
 
 		  if(cuentaMenu==9){
@@ -238,7 +237,7 @@ int main(void)
 		  	cuentaMenu=11;
 		  }
 		  while(cuentaMenu>9){
-			  Menu= DETECTA_ENCODER(cuentaAnterior,Menu,7);
+			  Menu = DETECTA_ENCODER(cuentaAnterior,Menu,7);
 			  cuentaAnterior=__HAL_TIM_GET_COUNTER(&htim2);
 			  pulso=0;
 			  while(subMenu==3){
@@ -267,7 +266,7 @@ int main(void)
 			  	cuentaSubMenu= DETECTA_ENCODER(cuentaAnterior,cuentaSubMenu,4);
 			  	cuentaAnterior=__HAL_TIM_GET_COUNTER(&htim2);
 
-			  	if(HAL_GPIO_ReadPin (GPIOA, BT_Pin)==0){
+			  	if(!HAL_GPIO_ReadPin(GPIOA, BT_Pin)){
 			  		if(pulso==1){
 			  			subMenu=1;
 			  			F_PORTADORA=F_PORTADORA_MENU;
@@ -389,7 +388,7 @@ int main(void)
 			  	subMenu=1;
 			  }
 			  OLED_MENU();
-			  if(HAL_GPIO_ReadPin(GPIOA, BT_Pin)==0){
+			  if(!HAL_GPIO_ReadPin(GPIOA, BT_Pin)){
 				  switch(Menu){
 				  	  case 0:
 				  		  if(subMenu==2){
@@ -436,6 +435,7 @@ int main(void)
 				  		  subMenu=8;
 				  		  break;
 				  	  case 7:
+						  // Opcion volver
 				  		  OLED_Clear();
 				  	      Menu=0;
 				  	  	  cuentaMenu=0;
@@ -451,27 +451,24 @@ int main(void)
 		  }
 	  }
 
-	  if(MI_Invertida==1){
-		  if(HAL_GPIO_ReadPin (GPIOA, MI_Pin)==1){
-			  Marcha_GRAL=0;
-		  }else{
-			  Marcha_GRAL=1;
-		  }
-	  }
-
-	//   if(Marcha_GRAL==1){
-	// 	  F_SIGNAL_A= F_SIGNAL_G;
-	//   }else{
-	// 	  F_SIGNAL_A=0.0;
+	//   if(MI_Invertida==1){
+	// 	  if(HAL_GPIO_ReadPin(GPIOA, MI_Pin) == 1){
+	// 		  Marcha_GRAL=0;
+	// 	  }else{
+	// 		  Marcha_GRAL=1;
+	// 	  }
 	//   }
+
+	  if(Marcha_GRAL==1){
+		// Ramp up
+		F_SIGNAL_A= F_SIGNAL_G;
+	  }else{
+		// Ramp down
+		F_SIGNAL_A=0.0;
+	  }
 	  OLED();
 	  Rampa();
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -873,9 +870,15 @@ void generate_spwm_table(void) {
 		float value2 = amplitude*(2-(1.00 + sin(angle120)))+(correccion*TIM1_Ticks)+25;
 		float value3 = amplitude*(2-(1.00 + sin(angle240)))+(correccion*TIM1_Ticks)+25;
 		// Almacena el valor en la tabla
-		spwm_table_R[i] = (uint32_t)value;
-		spwm_table_S[i] = (uint32_t)value2;
-		spwm_table_T[i] = (uint32_t)value3;
+		if (MI_Invertida) {
+			spwm_table_R[i] = (uint32_t)value;
+			spwm_table_S[i] = (uint32_t)value3;
+			spwm_table_T[i] = (uint32_t)value2;
+		} else {
+			spwm_table_R[i] = (uint32_t)value;
+			spwm_table_S[i] = (uint32_t)value2;
+			spwm_table_T[i] = (uint32_t)value3;
+		}
 	}
 }
 
@@ -889,8 +892,7 @@ void OLED(void) {
 			OLED_Print_Text(5,5,3,"DWN   ");
 			habCuenta=3;
 		}
-
-	}else{
+	} else {
 		snprintf(buff,sizeof(buff),
 			"%2ldkHz/%02d.%1dHz",
 			F_PORTADORA/1000,
@@ -898,7 +900,7 @@ void OLED(void) {
 			(uint16_t)(F_SIGNAL_G * 10) % 10
 		);
 		OLED_Print_Text(0,5,2,buff);
-		// OLED_Print_Text(0,50,2,"/"); //4 Páginas, columna 127 máx, tmaño 1 1 pag // tamaño 2 2 pagina // tamaño 3 3 páginas
+
 		OLED_Print_Text(2,0,2,"Amp.:");
 		snprintf(buff,sizeof(buff),"%02d.%1d%%",
 			(uint16_t)(M_a * 100),
@@ -919,60 +921,61 @@ void OLED(void) {
 
 uint32_t DETECTA_ENCODER(uint32_t cuentaPasada,uint32_t valorSalida,uint32_t valMax){
 	int32_t Valor=valorSalida;
-	if(__HAL_TIM_GET_COUNTER(&htim2)!=cuentaPasada){
-		if(valMax==35){
-			if(__HAL_TIM_GET_COUNTER(&htim2)<cuentaPasada){
-				Valor = Valor + 1;
-				if(Valor>valMax){
-					Valor=valMax;
-				}
+	if(__HAL_TIM_GET_COUNTER(&htim2) == cuentaPasada)
+		return Valor;
+
+	if(valMax==35){
+		if(__HAL_TIM_GET_COUNTER(&htim2)<cuentaPasada){
+			Valor = Valor + 1;
+			if(Valor>valMax){
+				Valor=valMax;
 			}
-			if(__HAL_TIM_GET_COUNTER(&htim2)>cuentaPasada){
-				Valor = Valor - 1;
-				if(Valor<0){
-					Valor=0;
-				}
+		}
+		if(__HAL_TIM_GET_COUNTER(&htim2)>cuentaPasada){
+			Valor = Valor - 1;
+			if(Valor<0){
+				Valor=0;
 			}
-		}else{
-			if(valMax>20){
+		}
+	}else{
+		if(valMax>20){
+					if(__HAL_TIM_GET_COUNTER(&htim2)<cuentaPasada){
+					Valor = Valor + 5;
+						if(Valor>valMax){
+							Valor=valMax;
+						}
+					}
+					if(__HAL_TIM_GET_COUNTER(&htim2)>cuentaPasada){
+						Valor = Valor - 5;
+						if(Valor<0){
+							Valor=0;
+						}
+					}
+				} else{
+					if(valMax>10){
 						if(__HAL_TIM_GET_COUNTER(&htim2)<cuentaPasada){
-						Valor = Valor + 5;
+							Valor = Valor + 1;
 							if(Valor>valMax){
 								Valor=valMax;
 							}
 						}
 						if(__HAL_TIM_GET_COUNTER(&htim2)>cuentaPasada){
-							Valor = Valor - 5;
+							Valor = Valor - 1;
 							if(Valor<0){
 								Valor=0;
 							}
 						}
 					} else{
-						if(valMax>10){
-							if(__HAL_TIM_GET_COUNTER(&htim2)<cuentaPasada){
-								Valor = Valor + 1;
-								if(Valor>valMax){
-									Valor=valMax;
-								}
-							}
-							if(__HAL_TIM_GET_COUNTER(&htim2)>cuentaPasada){
-								Valor = Valor - 1;
-								if(Valor<0){
-									Valor=0;
-								}
-							}
-						} else{
-							if(__HAL_TIM_GET_COUNTER(&htim2)-1<cuentaPasada){
-								Valor = (valorSalida + 1) % valMax;
-							}
-							if(__HAL_TIM_GET_COUNTER(&htim2)+1>cuentaPasada){
-								Valor = (valorSalida-1+valMax) % valMax;
-							}
+						if(__HAL_TIM_GET_COUNTER(&htim2)-1<cuentaPasada){
+							Valor = (valorSalida + 1) % valMax;
+						}
+						if(__HAL_TIM_GET_COUNTER(&htim2)+1>cuentaPasada){
+							Valor = (valorSalida-1+valMax) % valMax;
 						}
 					}
-		}
-		HAL_Delay(1);
+				}
 	}
+	HAL_Delay(1);
 	return Valor;
 }
 
@@ -1097,6 +1100,7 @@ float calcularSalto(uint32_t nivelRampa, float deltaF) {
     else if (nivelRampa <= 5) divisor = 20;
     else if (nivelRampa <= 12) divisor = 50;
     else divisor = 100;
+
     return fabs(deltaF) / divisor;
 }
 
@@ -1104,8 +1108,9 @@ void Rampa(void){
 	uint32_t newrampUp=rampaUp;
 	uint32_t newrampDW=rampaDown;
 	float deltaF=F_SIGNAL_F-F_SIGNAL_A;
-	uint8_t rampaUp = deltaF < 0 ? 1 : 0;
-	uint32_t nivelRampa = rampaUp ? newrampUp : newrampDW;
+	// uint8_t rampaUp = deltaF < 0 ? 1 : 0;
+	uint8_t isRampUp = deltaF < 0 ? 1 : 0;
+	uint32_t nivelRampa = isRampUp ? newrampUp : newrampDW;
 	float salto = calcularSalto(nivelRampa, deltaF);
 
 	uint32_t last_time = HAL_GetTick();
@@ -1121,7 +1126,7 @@ void Rampa(void){
 		if (nivelRampa == 0) {
 			F_SIGNAL_F = F_SIGNAL_A;
 		} else {
-			F_SIGNAL_F += rampaUp ? salto : -salto;
+			F_SIGNAL_F += isRampUp ? salto : -salto;
 		}
 
 		  while (HAL_GetTick() - last_time < delay_ms) { // 1000 ms
@@ -1129,10 +1134,10 @@ void Rampa(void){
 		  }
 		  last_time = HAL_GetTick();
 
-		  if (habCuenta == 0) habCuenta = rampaUp ? 1 : 2;
+		  if (habCuenta == 0) habCuenta = isRampUp ? 1 : 2;
 
-		  if (rampaUp && F_SIGNAL_F > F_SIGNAL_A + 0.1) F_SIGNAL_F = F_SIGNAL_A;
-		  if (!rampaUp && F_SIGNAL_F < F_SIGNAL_A - 0.1) F_SIGNAL_F = F_SIGNAL_A;
+		  if (isRampUp && F_SIGNAL_F > F_SIGNAL_A + 0.1) F_SIGNAL_F = F_SIGNAL_A;
+		  if (!isRampUp && F_SIGNAL_F < F_SIGNAL_A - 0.1) F_SIGNAL_F = F_SIGNAL_A;
 
 		  if (F_SIGNAL_F > 50.0) {
 			  M_a = 1;
@@ -1151,7 +1156,7 @@ void Rampa(void){
 	  TIM4_Ticks = TIM4CLK / (NS * F_SIGNAL_F);
 	  TIM4->ARR=TIM4_Ticks-1;
 
-	  if(HAL_GPIO_ReadPin (GPIOA, BT_Pin)==0 && pulso2==1){
+	  if(HAL_GPIO_ReadPin(GPIOA, BT_Pin)==0 && pulso2==1){
 		  pulso2=0;
 		  break;
 	  }else{
